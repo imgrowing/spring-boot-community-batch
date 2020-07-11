@@ -27,7 +27,7 @@ public class InactiveUserJobTest {
 
 	@Test
 	public void 휴면_회원_전환_테스트() throws Exception {
-		// JobLauncherTestUtils.launchJob()은  Job을 실행시키고, 실행 결과를 담고 있는 JobExecution 이 반환한다.
+		// JobLauncherTestUtils.launchJob()은 JobLauncher로 Job을 실행시키고, 실행 결과를 담고 있는 JobExecution 을 반환한다.
 		JobExecution jobExecution = jobLauncherTestUtils.launchJob();
 
 		// Job의 실행 여부는 COMPLETE (성공)이어야 한다.

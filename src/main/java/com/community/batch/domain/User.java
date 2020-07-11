@@ -3,10 +3,7 @@ package com.community.batch.domain;
 import com.community.batch.domain.enums.Grade;
 import com.community.batch.domain.enums.SocialType;
 import com.community.batch.domain.enums.UserStatus;
-import lombok.Builder;
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import javax.persistence.*;
 import java.io.Serializable;
@@ -14,7 +11,6 @@ import java.time.LocalDateTime;
 
 @Getter
 @EqualsAndHashCode(of = { "idx", "email" })
-@NoArgsConstructor
 @Entity
 @Table
 public class User implements Serializable {
@@ -40,20 +36,23 @@ public class User implements Serializable {
 	@Enumerated(value = EnumType.STRING)
 	private Grade grade;
 
-	private LocalDateTime createDate;
+	private LocalDateTime createdDate;
 
 	private LocalDateTime updatedDate;
 
+	public User() {
+	}
+
 	@Builder
 	public User(String name, String password, String email, String principal, SocialType socialType, UserStatus status,
-		LocalDateTime createDate, LocalDateTime updatedDate) {
+		LocalDateTime createdDate, LocalDateTime updatedDate) {
 		this.name = name;
 		this.password = password;
 		this.email = email;
 		this.principal = principal;
 		this.socialType = socialType;
 		this.status = status;
-		this.createDate = createDate;
+		this.createdDate = createdDate;
 		this.updatedDate = updatedDate;
 	}
 
