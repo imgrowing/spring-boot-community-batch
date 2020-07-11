@@ -1,0 +1,30 @@
+.gradle/
+/build/
+!gradle/wrapper/gradle-wrapper.jar
+*.prefs
+target/
+tmp
+project/
+out
+.metadata
+Servers
+atlassian-ide-plugin.xml
+*~
+rebel.xml
+buildSrc/
+db-migration/
+contiperf-report/
+bin/
+.DS_Store
+
+
+### IntelliJ IDEA ###
+.idea
+*.iws
+*.iml
+*.ipr
+
+### Generated ###
+**/src/generated/
+classes/
+
