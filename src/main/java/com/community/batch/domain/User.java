@@ -42,11 +42,11 @@ public class User implements Serializable {
 
 	private LocalDateTime createDate;
 
-	private LocalDateTime updateDate;
+	private LocalDateTime updatedDate;
 
 	@Builder
 	public User(String name, String password, String email, String principal, SocialType socialType, UserStatus status,
-		LocalDateTime createDate, LocalDateTime updateDate) {
+		LocalDateTime createDate, LocalDateTime updatedDate) {
 		this.name = name;
 		this.password = password;
 		this.email = email;
@@ -54,7 +54,7 @@ public class User implements Serializable {
 		this.socialType = socialType;
 		this.status = status;
 		this.createDate = createDate;
-		this.updateDate = updateDate;
+		this.updatedDate = updatedDate;
 	}
 
 	public User setInactive() {
