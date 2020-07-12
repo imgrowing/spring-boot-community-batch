@@ -15,12 +15,16 @@ import org.springframework.batch.core.configuration.annotation.StepBuilderFactor
 import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.batch.item.ItemWriter;
+import org.springframework.batch.item.ParseException;
+import org.springframework.batch.item.UnexpectedInputException;
 import org.springframework.batch.item.database.JpaItemWriter;
 import org.springframework.batch.item.database.JpaPagingItemReader;
 import org.springframework.batch.item.support.ListItemReader;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.task.SimpleAsyncTaskExecutor;
+import org.springframework.core.task.TaskExecutor;
 
 import javax.persistence.EntityManagerFactory;
 import java.time.LocalDateTime;
@@ -62,7 +66,8 @@ public class InactiveUserJobConfig {
 			ListItemReader<User> inactiveUserReader,
 			InactiveStepListener stepListener,
 			InactiveChunkListener chunkListener,
-			InactiveProcessListener processListener
+			InactiveProcessListener processListener,
+			TaskExecutor taskExecutor
 	) {
 		return stepBuilderFactory.get("inactiveUserStep") // StepBuilder를 생성
 			.<User, User> chunk(CHUNK_SIZE)             // chunk 단위로 처리(commit)할 item 정보를 지정. Input/Output의 타입을 명시
@@ -72,6 +77,8 @@ public class InactiveUserJobConfig {
 			.listener(stepListener)
 			.listener(chunkListener)
 			.listener(processListener)
+			.taskExecutor(taskExecutor)
+			.throttleLimit(2)
 			.build();
 	}
 
@@ -114,7 +121,17 @@ public class InactiveUserJobConfig {
 		LocalDateTime now = LocalDateTime.ofInstant(nowDate.toInstant(), ZoneId.systemDefault());
 		log.info("=======================> jobParameters[nowDate]: {}", now);
 		List<User> oldUsers = userRepository.findByUpdatedDateBeforeAndStatus(now.minusYears(1), UserStatus.ACTIVE);
-		return new ListItemReader<>(oldUsers); // 배치에서 사용할 data를 조회해서 reader를 생성한다.
+		ListItemReader<User> userListItemReader = new ListItemReader<User>(oldUsers){
+			@Override
+			public synchronized User read() {
+				User user = super.read();
+				if (user != null) {
+					log.info("read: {}", user.getIdx());
+				}
+				return user;
+			}
+		};
+		return userListItemReader; // 배치에서 사용할 data를 조회해서 reader를 생성한다.
 	}
 
 	public ItemProcessor<User, User> inactiveUserProcessor() {
@@ -130,16 +147,22 @@ public class InactiveUserJobConfig {
 		//*/
 	}
 
-	/*
 	public ItemWriter<User> inactiveUserWriter() {
-		return users -> userRepository.saveAll(users); // users는 chunk 단위인 10 개씩 전달된다.
+		return users -> {
+			log.info("write size: {}", users.size());
+			userRepository.saveAll(users); // users는 chunk 단위인 10 개씩 전달된다.
+		};
 	}
-	*/
 
 	// JpaItemWriter를 사용하면 지정한 타입에 대해 chunk 단위의 writer를 처리해준다.
-	private JpaItemWriter<User> inactiveUserWriter() {
-		JpaItemWriter<User> jpaItemWriter = new JpaItemWriter<>();
-		jpaItemWriter.setEntityManagerFactory(entityManagerFactory);
-		return jpaItemWriter;
+//	private JpaItemWriter<User> inactiveUserWriter() {
+//		JpaItemWriter<User> jpaItemWriter = new JpaItemWriter<>();
+//		jpaItemWriter.setEntityManagerFactory(entityManagerFactory);
+//		return jpaItemWriter;
+//	}
+
+	@Bean
+	public TaskExecutor taskExecutor() {
+		return new SimpleAsyncTaskExecutor("batch-task-executor");
 	}
 }
