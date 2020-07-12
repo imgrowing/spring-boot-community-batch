@@ -95,6 +95,13 @@ public class InactiveUserJobConfig {
 			public int getPage() {
 				return 0;
 			}
+
+			// taskExecutor 와 throttleLimit의 조합으로 사용할 경우 read()를 synchronized 처리해 주어야 함
+			// 그렇지 않으면 여러 스레드가 read에 동시에 진입하여 같은 데이터를 읽어오는 상황이 발생함
+			@Override
+			public synchronized User read() throws Exception, UnexpectedInputException, ParseException {
+				return super.read();
+			}
 		};
 		String jpqlQuery = "select u from User as u where u.updatedDate < :updatedDate and u.status= :status";
 		jpaPagingItemReader.setQueryString(jpqlQuery); // JPQL 로 지정해야 한다.
@@ -160,6 +167,11 @@ public class InactiveUserJobConfig {
 //		jpaItemWriter.setEntityManagerFactory(entityManagerFactory);
 //		return jpaItemWriter;
 //	}
+
+	@Bean
+	public TaskExecutor taskExecutor() {
+		return new SimpleAsyncTaskExecutor("batch-task-executor");
+	}
 
 	@Bean
 	public TaskExecutor taskExecutor() {
