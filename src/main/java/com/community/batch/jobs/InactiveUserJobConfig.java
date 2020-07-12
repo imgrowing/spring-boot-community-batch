@@ -15,12 +15,16 @@ import org.springframework.batch.core.configuration.annotation.StepBuilderFactor
 import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.batch.item.ItemWriter;
+import org.springframework.batch.item.ParseException;
+import org.springframework.batch.item.UnexpectedInputException;
 import org.springframework.batch.item.database.JpaItemWriter;
 import org.springframework.batch.item.database.JpaPagingItemReader;
 import org.springframework.batch.item.support.ListItemReader;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.task.SimpleAsyncTaskExecutor;
+import org.springframework.core.task.TaskExecutor;
 
 import javax.persistence.EntityManagerFactory;
 import java.time.LocalDateTime;
@@ -62,7 +66,8 @@ public class InactiveUserJobConfig {
 			ListItemReader<User> inactiveUserReader,
 			InactiveStepListener stepListener,
 			InactiveChunkListener chunkListener,
-			InactiveProcessListener processListener
+			InactiveProcessListener processListener,
+			TaskExecutor taskExecutor
 	) {
 		return stepBuilderFactory.get("inactiveUserStep") // StepBuilder를 생성
 			.<User, User> chunk(CHUNK_SIZE)             // chunk 단위로 처리(commit)할 item 정보를 지정. Input/Output의 타입을 명시
@@ -72,6 +77,8 @@ public class InactiveUserJobConfig {
 			.listener(stepListener)
 			.listener(chunkListener)
 			.listener(processListener)
+			.taskExecutor(taskExecutor)
+			.throttleLimit(2)
 			.build();
 	}
 
@@ -87,6 +94,13 @@ public class InactiveUserJobConfig {
 			@Override
 			public int getPage() {
 				return 0;
+			}
+
+			// taskExecutor 와 throttleLimit의 조합으로 사용할 경우 read()를 synchronized 처리해 주어야 함
+			// 그렇지 않으면 여러 스레드가 read에 동시에 진입하여 같은 데이터를 읽어오는 상황이 발생함
+			@Override
+			public synchronized User read() throws Exception, UnexpectedInputException, ParseException {
+				return super.read();
 			}
 		};
 		String jpqlQuery = "select u from User as u where u.updatedDate < :updatedDate and u.status= :status";
@@ -141,5 +155,10 @@ public class InactiveUserJobConfig {
 		JpaItemWriter<User> jpaItemWriter = new JpaItemWriter<>();
 		jpaItemWriter.setEntityManagerFactory(entityManagerFactory);
 		return jpaItemWriter;
+	}
+
+	@Bean
+	public TaskExecutor taskExecutor() {
+		return new SimpleAsyncTaskExecutor("batch-task-executor");
 	}
 }
