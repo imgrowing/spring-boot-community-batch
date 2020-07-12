@@ -10,6 +10,7 @@ import org.springframework.batch.core.configuration.annotation.StepBuilderFactor
 import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.batch.item.ItemWriter;
+import org.springframework.batch.item.database.JpaItemWriter;
 import org.springframework.batch.item.database.JpaPagingItemReader;
 import org.springframework.batch.item.support.ListItemReader;
 import org.springframework.context.annotation.Bean;
@@ -105,7 +106,16 @@ public class InactiveUserJobConfig {
 		*/
 	}
 
+	/*
 	public ItemWriter<User> inactiveUserWriter() {
 		return users -> userRepository.saveAll(users); // users는 chunk 단위인 10 개씩 전달된다.
+	}
+	*/
+
+	// JpaItemWriter를 사용하면 지정한 타입에 대해 chunk 단위의 writer를 처리해준다.
+	private JpaItemWriter<User> inactiveUserWriter() {
+		JpaItemWriter<User> jpaItemWriter = new JpaItemWriter<>();
+		jpaItemWriter.setEntityManagerFactory(entityManagerFactory);
+		return jpaItemWriter;
 	}
 }
