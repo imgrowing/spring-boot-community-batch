@@ -3,6 +3,7 @@ package com.community.batch.jobs;
 import com.community.batch.domain.User;
 import com.community.batch.domain.enums.UserStatus;
 import com.community.batch.domain.repository.UserRepository;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
 import org.springframework.batch.core.configuration.annotation.JobBuilderFactory;
@@ -13,16 +14,20 @@ import org.springframework.batch.item.ItemWriter;
 import org.springframework.batch.item.database.JpaItemWriter;
 import org.springframework.batch.item.database.JpaPagingItemReader;
 import org.springframework.batch.item.support.ListItemReader;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import javax.persistence.EntityManagerFactory;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 @Configuration
+@Slf4j
 public class InactiveUserJobConfig {
 
 	private final static int CHUNK_SIZE = 5;
@@ -48,10 +53,10 @@ public class InactiveUserJobConfig {
 
 	@Bean
 	public Step inactiveJobStep(StepBuilderFactory stepBuilderFactory,
-			JpaPagingItemReader<User> inactiveUserJpaReader) {
+			ListItemReader<User> inactiveUserReader) {
 		return stepBuilderFactory.get("inactiveUserStep") // StepBuilder를 생성
 			.<User, User> chunk(CHUNK_SIZE)             // chunk 단위로 처리(commit)할 item 정보를 지정. Input/Output의 타입을 명시
-			.reader(inactiveUserJpaReader)
+			.reader(inactiveUserReader)
 			.processor(inactiveUserProcessor())
 			.writer(inactiveUserWriter())
 			.build();
@@ -89,8 +94,13 @@ public class InactiveUserJobConfig {
 	// @StepScope는 proxyMode가 TARGET_CLASS로 되어 있기 때문에 반드시 구현된 반환 타입을 명시해야 한다(ItemReader 로 명시하면 안됨).
 	@StepScope
 	@Bean
-	public ListItemReader<User> inactiveUserReader() {
-		List<User> oldUsers = userRepository.findByUpdatedDateBeforeAndStatus(LocalDateTime.now().minusYears(1), UserStatus.ACTIVE);
+	public ListItemReader<User> inactiveUserReader(
+		@Value("#{jobParameters[nowDate]}") Date nowDate
+	) {
+		log.info("=======================> Date nowDate: {}", nowDate);
+		LocalDateTime now = LocalDateTime.ofInstant(nowDate.toInstant(), ZoneId.systemDefault());
+		log.info("=======================> jobParameters[nowDate]: {}", now);
+		List<User> oldUsers = userRepository.findByUpdatedDateBeforeAndStatus(now.minusYears(1), UserStatus.ACTIVE);
 		return new ListItemReader<>(oldUsers); // 배치에서 사용할 data를 조회해서 reader를 생성한다.
 	}
 

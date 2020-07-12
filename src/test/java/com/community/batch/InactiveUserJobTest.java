@@ -6,12 +6,14 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.batch.core.BatchStatus;
 import org.springframework.batch.core.JobExecution;
+import org.springframework.batch.core.JobParametersBuilder;
 import org.springframework.batch.test.JobLauncherTestUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit4.SpringRunner;
 
 import java.time.LocalDateTime;
+import java.util.Date;
 
 import static org.junit.Assert.assertEquals;
 
@@ -28,7 +30,13 @@ public class InactiveUserJobTest {
 	@Test
 	public void 휴면_회원_전환_테스트() throws Exception {
 		// JobLauncherTestUtils.launchJob()은 JobLauncher로 Job을 실행시키고, 실행 결과를 담고 있는 JobExecution 을 반환한다.
-		JobExecution jobExecution = jobLauncherTestUtils.launchJob();
+		// JobExecution jobExecution = jobLauncherTestUtils.launchJob();
+
+		// JobParameters 를 사용
+		Date nowDate = new Date();
+		JobExecution jobExecution = jobLauncherTestUtils.launchJob(
+			new JobParametersBuilder().addDate("nowDate", nowDate).toJobParameters()
+		);
 
 		// Job의 실행 여부는 COMPLETE (성공)이어야 한다.
 		assertEquals(BatchStatus.COMPLETED, jobExecution.getStatus());
