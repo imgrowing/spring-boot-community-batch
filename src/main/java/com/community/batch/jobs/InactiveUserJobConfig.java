@@ -3,6 +3,10 @@ package com.community.batch.jobs;
 import com.community.batch.domain.User;
 import com.community.batch.domain.enums.UserStatus;
 import com.community.batch.domain.repository.UserRepository;
+import com.community.batch.jobs.listener.InactiveChunkListener;
+import com.community.batch.jobs.listener.InactiveJobListener;
+import com.community.batch.jobs.listener.InactiveProcessListener;
+import com.community.batch.jobs.listener.InactiveStepListener;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
@@ -43,22 +47,31 @@ public class InactiveUserJobConfig {
 	@Bean
 	public Job inactiveUserJob(
 			JobBuilderFactory jobBuilderFactory, // JobBuilderFactory를 injection 받음
-			Step inactiveJobStep
+			Step inactiveJobStep,
+			InactiveJobListener jobListener
 	) {
 		return jobBuilderFactory.get("inactiveUserJob") // jobBuilder 인스턴스를 생성
 			.preventRestart()                           // Job의 재실행을 막음
 			.start(inactiveJobStep)						// inactiveJobStep을 실행하는 jobBuilder를 생성
+			.listener(jobListener)
 			.build();
 	}
 
 	@Bean
 	public Step inactiveJobStep(StepBuilderFactory stepBuilderFactory,
-			ListItemReader<User> inactiveUserReader) {
+			ListItemReader<User> inactiveUserReader,
+			InactiveStepListener stepListener,
+			InactiveChunkListener chunkListener,
+			InactiveProcessListener processListener
+	) {
 		return stepBuilderFactory.get("inactiveUserStep") // StepBuilder를 생성
 			.<User, User> chunk(CHUNK_SIZE)             // chunk 단위로 처리(commit)할 item 정보를 지정. Input/Output의 타입을 명시
 			.reader(inactiveUserReader)
 			.processor(inactiveUserProcessor())
 			.writer(inactiveUserWriter())
+			.listener(stepListener)
+			.listener(chunkListener)
+			.listener(processListener)
 			.build();
 	}
 
@@ -105,15 +118,16 @@ public class InactiveUserJobConfig {
 	}
 
 	public ItemProcessor<User, User> inactiveUserProcessor() {
-		return User::setInactive;
-		/*
+		//return User::setInactive;
+		///*
 		return new ItemProcessor<User, User>() {
 			@Override
 			public User process(User user) throws Exception {
+				log.info("process: {}", user.getIdx());
 				return user.setInactive();
 			}
 		};
-		*/
+		//*/
 	}
 
 	/*
