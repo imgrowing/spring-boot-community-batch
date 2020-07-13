@@ -34,7 +34,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-@Configuration
+//@Configuration // InactiveUserPartitionJobConfig의 테스트를 위해 잠시 주석 처리함
 // @ConditionalOnProperty를 사용하면 batch 실행시에는 원하는 Job만 실행할 수 있게 되지만,
 // Batch IntegrationTest 에는 적합하지 않다(job의 bean이 생성되지 않으므로)
 //@ConditionalOnProperty(name = "spring.batch.job.names", havingValue = "inactiveUserJob")
